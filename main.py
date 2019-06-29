@@ -119,6 +119,7 @@ if __name__ == "__main__":
     button_rst = tk.Button(topFrame, text="Reset", command = lambda:pushed_Reset(button_rst))
     button_rst.pack(fill="x", padx=20, side="left") # ボタンを表示して並べるために必要
 
+    root.attributes("-topmost", True) # 常に最前面に表示
     root.mainloop()
 
     stop_flg = True
