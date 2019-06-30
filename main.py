@@ -17,24 +17,38 @@ import threading as th
 import time
 from tkinter import messagebox
 
-stop_flg = False
+stop_flg = 0 # 0: タイマー実行 1:リセット 2:タイマー停止
 thread = None
+
+def reset_thread(): # Reset処理を行う
+    global thread
+    thread = None
+    print("Reset timer")
+
+    return 1
 
 def countdown(min): # カウントダウンを実行する関数
     global stop_flg
     global thread
     global cnt_time
+    global run_stop_text
 
     print(stop_flg)
 
     reset_flg = 0 # resetを押されたのフラグ
 
-    if not stop_flg:
+    if stop_flg == 0:
         for i in range(0, min):
+            if stop_flg == 2: # 停止ボタンが押されたら、再開ボタンを押されるまでタイマーを停止する
+                while(1):
+                    if stop_flg == 0: # 再開ボタンを押されたら再度処理を開始する
+                        break
+                    if stop_flg == 1:
+                        reset_flg = reset_thread()
+                        break
+
             if stop_flg == 1: # Resetボタンが押されて割り込みが発生した場合
-                thread = None
-                reset_flg = 1
-                print("Reset timer")
+                reset_flg = reset_thread()
                 break
             
             # 表示する値を計算
@@ -50,9 +64,13 @@ def countdown(min): # カウントダウンを実行する関数
         cnt_time.set("finish") # 終了したことをLabelに表示
         thread = None # 実行されているThreadがなくなるので、Noneを代入
 
+        # Run/StopのテキストをStopに戻しておく
+        run_stop_text.set("Stop")
+
         # 終了したことをポップアップで知らせる
+        print(reset_flg)
         if reset_flg == 0: # resetを押されてないときのみ、表示させる
-            tk.messagebox.showinfo("終了しました", str(int(min / 60)) + "分が経過しました")
+            messagebox.showinfo("終了しました", str(int(min / 60)) + "分が経過しました")
 
 def start_count_down(min): # カウントダウンを開始する関数
     global stop_flg
@@ -61,7 +79,7 @@ def start_count_down(min): # カウントダウンを開始する関数
     print(stop_flg, thread) # debug
 
     if not thread:
-        stop_flg = False # カウントダウンを行うので、停止フラグをFalseにする
+        stop_flg = 0 # カウントダウンを行うので、停止フラグをFalseにする
         thread = th.Thread(target = countdown, args = (min, )) # threadでcountdown関数を実行 実行時間は引数で受け取る
         thread.start()
 
@@ -79,6 +97,21 @@ def pushed_5min(button):
 
     start_count_down(min) # どのくらいの時間countdownを実行するか指定してスタートさせる
 
+def pushed_RunStop(button):
+    global stop_flg
+    global thread
+    global run_stop_text
+
+    if thread:
+        if stop_flg == 0:
+            print("Stop Timer")
+            stop_flg = 2
+            run_stop_text.set("Run ")
+        else:
+            print("Run Timer")
+            stop_flg = 0
+            run_stop_text.set("Stop")
+
 def pushed_Reset(button):
     print("Reset Timer")
 
@@ -91,7 +124,7 @@ def pushed_Reset(button):
         ret = messagebox.askyesno("確認", "タイマーをResetしますか？")
         if ret == True:
             cnt_time.set("reset timer") # resetしたことを表示させる
-            stop_flg = True
+            stop_flg = 1 # タイマーをリセットする
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -106,18 +139,28 @@ if __name__ == "__main__":
     cnt_time = tk.StringVar()
     cnt_time.set("start ptimer")
 
+    # Run/Stopボタンのtext
+    global run_stop_text
+    run_stop_text = tk.StringVar()
+    run_stop_text.set("Stop")
+    
+    padx_num = 10 # ボタンの幅
+
     # 計測時間を表示する
     label_time = tk.Label(topFrame, textvariable=cnt_time)
-    label_time.pack(fill="x", padx=20, side="top")
+    label_time.pack(fill="x", padx=padx_num, side="top")
 
     button_25min = tk.Button(topFrame, text="25min", command = lambda:pushed_25min(button_25min))
-    button_25min.pack(fill="x", padx=20, side="left") # ボタンを表示して並べるために必要
+    button_25min.pack(fill="x", padx=padx_num, side="left") # ボタンを表示して並べるために必要
 
     button_5min = tk.Button(topFrame, text="5min", command = lambda:pushed_5min(button_5min))
-    button_5min.pack(fill="x", padx=20, side="left") # ボタンを表示して並べるために必要
+    button_5min.pack(fill="x", padx=padx_num, side="left") # ボタンを表示して並べるために必要
+
+    button_runstop = tk.Button(topFrame, textvariable=run_stop_text, command = lambda:pushed_RunStop(button_runstop))
+    button_runstop.pack(fill="x", padx=padx_num, side="left") # ボタンを表示して並べるために必要
 
     button_rst = tk.Button(topFrame, text="Reset", command = lambda:pushed_Reset(button_rst))
-    button_rst.pack(fill="x", padx=20, side="left") # ボタンを表示して並べるために必要
+    button_rst.pack(fill="x", padx=padx_num, side="left") # ボタンを表示して並べるために必要
 
     root.attributes("-topmost", True) # 常に最前面に表示
     root.mainloop()
